@@ -21,6 +21,16 @@ DEBIT_CATEGORIES = [
     "OTHER",
 ]
 
+DEBIT_CATEGORY_WEIGHTS = [
+    25,
+    15,
+    20,
+    15,
+    10,
+    5,
+    10,
+]
+
 
 def load_csv(path):
     with path.open("r", newline="", encoding="utf-8") as file:
@@ -130,7 +140,11 @@ def generate_transactions(customers, accounts):
                         month_end,
                     ).isoformat(),
                     "transaction_type": "DEBIT",
-                    "category": random.choice(DEBIT_CATEGORIES),
+                    "category": random.choices(
+    DEBIT_CATEGORIES,
+    weights=DEBIT_CATEGORY_WEIGHTS,
+    k=1,
+)[0],
                     "amount": expense_amount,
                 }
 
