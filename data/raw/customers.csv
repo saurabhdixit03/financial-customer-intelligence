@@ -1,0 +1,21 @@
+customer_id,age,city,occupation,annual_income,join_date
+CUST0001,44,Pune,Operations Executive,350000,2025-03-02
+CUST0002,50,Hyderabad,Accountant,1450000,2022-11-04
+CUST0003,43,Mumbai,Software Engineer,1700000,2022-12-04
+CUST0004,53,Chennai,Accountant,1100000,2025-12-18
+CUST0005,58,Chennai,Sales Executive,1600000,2024-06-23
+CUST0006,24,Pune,Software Engineer,2350000,2023-06-09
+CUST0007,39,Chennai,Business Owner,1050000,2020-06-07
+CUST0008,29,Bengaluru,Operations Executive,1650000,2024-10-05
+CUST0009,26,Mumbai,Teacher,1550000,2024-10-13
+CUST0010,54,Pune,Sales Executive,1700000,2024-07-04
+CUST0011,49,Mumbai,Sales Executive,1950000,2021-11-12
+CUST0012,51,Chennai,Software Engineer,2050000,2024-03-23
+CUST0013,38,Bengaluru,Business Owner,1000000,2021-09-16
+CUST0014,57,Bengaluru,Accountant,1050000,2025-03-18
+CUST0015,27,Chennai,Sales Executive,750000,2023-05-01
+CUST0016,52,Mumbai,Operations Executive,400000,2023-03-13
+CUST0017,46,Chennai,Software Engineer,1550000,2022-05-06
+CUST0018,43,Pune,Accountant,700000,2020-06-29
+CUST0019,48,Pune,Accountant,1950000,2020-01-20
+CUST0020,49,Hyderabad,Sales Executive,2200000,2023-03-26
