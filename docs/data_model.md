@@ -49,8 +49,10 @@ Stores existing borrowing information for customers.
 | customer_id | Customer associated with the loan |
 | loan_type | Type of loan |
 | loan_amount | Original borrowed amount |
+| annual_interest_rate | Annual interest rate applied to the loan |
+| term_months | Original loan term in months |
 | emi_amount | Monthly EMI amount |
-| outstanding_amount | Remaining loan balance |
+| outstanding_amount | Remaining loan principal balance |
 | start_date | Date the loan started |
 | status | Current loan status |
 

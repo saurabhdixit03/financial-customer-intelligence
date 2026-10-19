@@ -32,3 +32,19 @@ CREATE TABLE IF NOT EXISTS transactions (
         FOREIGN KEY (account_id)
         REFERENCES accounts(account_id)
 );
+
+CREATE TABLE IF NOT EXISTS loans (
+    loan_id VARCHAR(20) PRIMARY KEY,
+    customer_id VARCHAR(20) NOT NULL,
+    loan_type VARCHAR(50) NOT NULL,
+    loan_amount NUMERIC(12, 2) NOT NULL,
+    annual_interest_rate NUMERIC(5, 2) NOT NULL,
+    term_months INTEGER NOT NULL,
+    emi_amount NUMERIC(12, 2) NOT NULL,
+    outstanding_amount NUMERIC(12, 2) NOT NULL,
+    start_date DATE NOT NULL,
+    status VARCHAR(20) NOT NULL,
+
+    FOREIGN KEY (customer_id)
+        REFERENCES customers(customer_id)
+);
