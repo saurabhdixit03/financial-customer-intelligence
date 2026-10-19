@@ -1,3 +1,4 @@
 pandas==3.0.6
 pytest==9.1.1
 psycopg[binary]==3.3.6
+streamlit==1.66.0
