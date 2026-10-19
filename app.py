@@ -25,8 +25,7 @@ st.set_page_config(
 # Database
 # ---------------------------------------------------------
 
-@st.cache_data(ttl=60)
-def load_customer_360():
+def get_password():
     password = os.getenv("DB_PASSWORD")
 
     if not password:
@@ -34,9 +33,14 @@ def load_customer_360():
             "DB_PASSWORD environment variable is not set."
         )
 
+    return password
+
+
+@st.cache_data(ttl=60)
+def load_customer_360():
     with psycopg.connect(
         **DB_CONFIG,
-        password=password,
+        password=get_password(),
     ) as connection:
         return pd.read_sql_query(
             """
@@ -50,16 +54,9 @@ def load_customer_360():
 
 @st.cache_data(ttl=60)
 def load_loan_readiness():
-    password = os.getenv("DB_PASSWORD")
-
-    if not password:
-        raise RuntimeError(
-            "DB_PASSWORD environment variable is not set."
-        )
-
     with psycopg.connect(
         **DB_CONFIG,
-        password=password,
+        password=get_password(),
     ) as connection:
         return pd.read_sql_query(
             """
@@ -71,8 +68,24 @@ def load_loan_readiness():
         )
 
 
+@st.cache_data(ttl=60)
+def load_customer_segmentation():
+    with psycopg.connect(
+        **DB_CONFIG,
+        password=get_password(),
+    ) as connection:
+        return pd.read_sql_query(
+            """
+            SELECT *
+            FROM customer_segmentation
+            ORDER BY customer_id;
+            """,
+            connection,
+        )
+
+
 # ---------------------------------------------------------
-# Formatting helpers
+# Formatting
 # ---------------------------------------------------------
 
 def format_currency(value):
@@ -89,57 +102,52 @@ def format_percentage(value):
     return f"{float(value) * 100:.1f}%"
 
 
-def readiness_reason(customer):
-    strengths = []
-    concerns = []
-
-    if customer["healthy_cash_flow_flag"] == 1:
-        strengths.append(
-            "Healthy cash-flow margin"
-        )
-    else:
-        concerns.append(
-            "Cash-flow margin is below the 30% project threshold"
-        )
-
-    if customer["stable_spending_flag"] == 1:
-        strengths.append(
-            "Monthly spending is relatively stable"
-        )
-    else:
-        concerns.append(
-            "Monthly spending shows higher variability"
-        )
-
-    if customer["manageable_debt_flag"] == 1:
-        strengths.append(
-            "Existing debt burden is manageable"
-        )
-    else:
-        concerns.append(
-            "Debt-to-income ratio is at or above the 30% project threshold"
-        )
-
-    return strengths, concerns
-
-
 def readiness_icon(level):
-    if level == "HIGH":
-        return "🟢"
+    return {
+        "HIGH": "🟢",
+        "MODERATE": "🟡",
+        "LOW": "🔴",
+    }.get(level, "⚪")
 
-    if level == "MODERATE":
-        return "🟡"
 
-    return "🔴"
+def segment_description(segment):
+    descriptions = {
+        "FINANCIALLY_STRONG": (
+            "Strong cash-flow retention, controlled spending "
+            "and manageable debt."
+        ),
+        "DEBT_BURDENED": (
+            "Existing monthly debt obligations consume a "
+            "relatively high share of monthly income."
+        ),
+        "HIGH_SPENDER": (
+            "A relatively high proportion of incoming funds "
+            "is used for spending."
+        ),
+        "STABLE": (
+            "Positive cash-flow position with manageable debt, "
+            "without meeting the stronger profile."
+        ),
+        "OTHER": (
+            "Does not clearly match one of the defined "
+            "behavioral profiles."
+        ),
+    }
+
+    return descriptions.get(
+        segment,
+        "No description available.",
+    )
 
 
 # ---------------------------------------------------------
-# Load data
+# Load analytical views
 # ---------------------------------------------------------
 
 try:
     customer_360 = load_customer_360()
     readiness = load_loan_readiness()
+    segmentation = load_customer_segmentation()
 
 except Exception as error:
     st.error(
@@ -156,10 +164,11 @@ except Exception as error:
     st.stop()
 
 
-# Convert PostgreSQL Decimal columns used by charts
-# into normal floating-point values.
+# ---------------------------------------------------------
+# Numeric conversion
+# ---------------------------------------------------------
 
-numeric_columns = [
+customer_numeric_columns = [
     "annual_income",
     "total_credit",
     "total_debit",
@@ -171,21 +180,15 @@ numeric_columns = [
     "debt_to_income_ratio",
 ]
 
-for column in numeric_columns:
+for column in customer_numeric_columns:
     if column in customer_360.columns:
         customer_360[column] = pd.to_numeric(
             customer_360[column],
             errors="coerce",
         )
 
+
 readiness_numeric_columns = [
-    "annual_income",
-    "net_cash_flow",
-    "spending_ratio",
-    "spending_variability",
-    "total_outstanding_amount",
-    "monthly_emi_obligation",
-    "debt_to_income_ratio",
     "cash_flow_margin",
 ]
 
@@ -197,37 +200,121 @@ for column in readiness_numeric_columns:
         )
 
 
+segmentation_numeric_columns = [
+    "cash_flow_margin",
+]
+
+for column in segmentation_numeric_columns:
+    if column in segmentation.columns:
+        segmentation[column] = pd.to_numeric(
+            segmentation[column],
+            errors="coerce",
+        )
+
+
 # ---------------------------------------------------------
-# Sidebar
+# Build unified analytical dataset
 # ---------------------------------------------------------
 
-st.sidebar.title("Financial Intelligence")
+readiness_features = readiness[
+    [
+        "customer_id",
+        "cash_flow_margin",
+        "healthy_cash_flow_flag",
+        "stable_spending_flag",
+        "manageable_debt_flag",
+        "readiness_score",
+        "readiness_level",
+    ]
+].rename(
+    columns={
+        "cash_flow_margin": "readiness_cash_flow_margin",
+    }
+)
+
+
+segment_features = segmentation[
+    [
+        "customer_id",
+        "customer_segment",
+    ]
+]
+
+
+analytics = (
+    customer_360
+    .merge(
+        readiness_features,
+        on="customer_id",
+        how="left",
+    )
+    .merge(
+        segment_features,
+        on="customer_id",
+        how="left",
+    )
+)
+
+
+# ---------------------------------------------------------
+# Sidebar filters
+# ---------------------------------------------------------
+
+st.sidebar.title(
+    "Financial Intelligence"
+)
 
 st.sidebar.caption(
-    "Explore customer behavior, debt exposure "
-    "and explainable loan readiness."
+    "Explore customer behavior, debt exposure, "
+    "segmentation and explainable loan readiness."
 )
 
 st.sidebar.divider()
 
+
 selected_cities = st.sidebar.multiselect(
     "City",
-    sorted(customer_360["city"].dropna().unique()),
+    sorted(
+        analytics["city"]
+        .dropna()
+        .unique()
+    ),
 )
+
 
 selected_occupations = st.sidebar.multiselect(
     "Occupation",
     sorted(
-        customer_360[
-            "occupation"
-        ].dropna().unique()
+        analytics["occupation"]
+        .dropna()
+        .unique()
     ),
 )
 
+
+segment_options = [
+    "FINANCIALLY_STRONG",
+    "HIGH_SPENDER",
+    "DEBT_BURDENED",
+    "STABLE",
+    "OTHER",
+]
+
+selected_segments = st.sidebar.multiselect(
+    "Customer Segment",
+    segment_options,
+)
+
+
 selected_readiness = st.sidebar.multiselect(
     "Readiness Level",
-    ["HIGH", "MODERATE", "LOW"],
+    [
+        "HIGH",
+        "MODERATE",
+        "LOW",
+    ],
 )
+
 
 st.sidebar.divider()
 
@@ -238,29 +325,11 @@ st.sidebar.caption(
 
 
 # ---------------------------------------------------------
-# Combine analytical views for filtering
+# Apply filters
 # ---------------------------------------------------------
 
-readiness_for_merge = readiness[
-    [
-        "customer_id",
-        "cash_flow_margin",
-        "healthy_cash_flow_flag",
-        "stable_spending_flag",
-        "manageable_debt_flag",
-        "readiness_score",
-        "readiness_level",
-    ]
-]
-
-analytics = customer_360.merge(
-    readiness_for_merge,
-    on="customer_id",
-    how="left",
-)
-
-
 filtered = analytics.copy()
+
 
 if selected_cities:
     filtered = filtered[
@@ -269,12 +338,22 @@ if selected_cities:
         )
     ]
 
+
 if selected_occupations:
     filtered = filtered[
         filtered["occupation"].isin(
             selected_occupations
         )
     ]
+
+
+if selected_segments:
+    filtered = filtered[
+        filtered["customer_segment"].isin(
+            selected_segments
+        )
+    ]
+
 
 if selected_readiness:
     filtered = filtered[
@@ -288,18 +367,20 @@ if selected_readiness:
 # Header
 # ---------------------------------------------------------
 
-st.title("Financial Customer Intelligence")
+st.title(
+    "Financial Customer Intelligence"
+)
 
 st.markdown(
     """
-    **Customer 360 • Financial Behavior • Debt Exposure •
-    Explainable Loan Readiness**
+    **Customer 360 • Behavioral Segmentation •
+    Financial Health • Explainable Loan Readiness**
     """
 )
 
 st.caption(
     "A data engineering and analytics project that transforms "
-    "raw synthetic financial data into validated, customer-level "
+    "raw synthetic financial data into validated customer-level "
     "decision-support insights."
 )
 
@@ -308,10 +389,17 @@ st.caption(
 # Tabs
 # ---------------------------------------------------------
 
-overview_tab, customer_tab, readiness_tab, data_tab = st.tabs(
+(
+    overview_tab,
+    customer_tab,
+    segmentation_tab,
+    readiness_tab,
+    data_tab,
+) = st.tabs(
     [
         "📊 Overview",
         "👤 Customer Explorer",
+        "🧩 Segmentation",
         "💳 Loan Readiness",
         "🗃️ Data Explorer",
     ]
@@ -324,7 +412,9 @@ overview_tab, customer_tab, readiness_tab, data_tab = st.tabs(
 
 with overview_tab:
 
-    st.subheader("Portfolio Overview")
+    st.subheader(
+        "Portfolio Overview"
+    )
 
     total_customers = len(filtered)
 
@@ -340,17 +430,21 @@ with overview_tab:
         "debt_to_income_ratio"
     ].mean()
 
+
     metric1, metric2, metric3, metric4 = st.columns(4)
+
 
     metric1.metric(
         "Customers",
         total_customers,
     )
 
+
     metric2.metric(
         "Customers With Active Loans",
         int(customers_with_loans),
     )
+
 
     metric3.metric(
         "Outstanding Balance",
@@ -359,6 +453,7 @@ with overview_tab:
         ),
     )
 
+
     metric4.metric(
         "Average DTI",
         format_percentage(
@@ -366,9 +461,12 @@ with overview_tab:
         ),
     )
 
+
     st.divider()
 
+
     chart1, chart2 = st.columns(2)
+
 
     with chart1:
 
@@ -377,7 +475,9 @@ with overview_tab:
         )
 
         readiness_distribution = (
-            filtered["readiness_level"]
+            filtered[
+                "readiness_level"
+            ]
             .value_counts()
             .reindex(
                 [
@@ -394,7 +494,33 @@ with overview_tab:
             horizontal=True,
         )
 
+
     with chart2:
+
+        st.subheader(
+            "Customer Segments"
+        )
+
+        segment_distribution = (
+            filtered[
+                "customer_segment"
+            ]
+            .value_counts()
+        )
+
+        st.bar_chart(
+            segment_distribution,
+            horizontal=True,
+        )
+
+
+    st.divider()
+
+
+    chart3, chart4 = st.columns(2)
+
+
+    with chart3:
 
         st.subheader(
             "Customers by City"
@@ -409,7 +535,36 @@ with overview_tab:
             city_distribution
         )
 
+
+    with chart4:
+
+        st.subheader(
+            "Financial Indicators"
+        )
+
+        indicator1, indicator2 = st.columns(2)
+
+        indicator1.metric(
+            "Avg Spending Ratio",
+            format_percentage(
+                filtered[
+                    "spending_ratio"
+                ].mean()
+            ),
+        )
+
+        indicator2.metric(
+            "Avg Cash-Flow Margin",
+            format_percentage(
+                filtered[
+                    "readiness_cash_flow_margin"
+                ].mean()
+            ),
+        )
+
+
     st.divider()
+
 
     st.subheader(
         "Outstanding Loan Exposure"
@@ -430,53 +585,24 @@ with overview_tab:
             "total_outstanding_amount",
             ascending=False,
         )
-        .set_index("customer_id")
+        .set_index(
+            "customer_id"
+        )
     )
 
+
     if loan_exposure.empty:
+
         st.info(
             "No customers with active loans "
             "match the selected filters."
         )
+
     else:
+
         st.bar_chart(
             loan_exposure
         )
-
-    st.divider()
-
-    st.subheader(
-        "Portfolio Financial Indicators"
-    )
-
-    indicator1, indicator2, indicator3 = st.columns(3)
-
-    indicator1.metric(
-        "Average Spending Ratio",
-        format_percentage(
-            filtered[
-                "spending_ratio"
-            ].mean()
-        ),
-    )
-
-    indicator2.metric(
-        "Average Spending Variability",
-        format_percentage(
-            filtered[
-                "spending_variability"
-            ].mean()
-        ),
-    )
-
-    indicator3.metric(
-        "Average Cash-Flow Margin",
-        format_percentage(
-            filtered[
-                "cash_flow_margin"
-            ].mean()
-        ),
-    )
 
 
 # =========================================================
@@ -488,6 +614,7 @@ with customer_tab:
     st.subheader(
         "Customer 360 Explorer"
     )
+
 
     if filtered.empty:
 
@@ -504,14 +631,17 @@ with customer_tab:
             ].tolist(),
         )
 
+
         customer = filtered[
             filtered["customer_id"]
             == selected_customer_id
         ].iloc[0]
 
+
         st.markdown(
             f"### {selected_customer_id}"
         )
+
 
         st.caption(
             f"{customer['occupation']} • "
@@ -520,7 +650,9 @@ with customer_tab:
             f"{customer['join_date']}"
         )
 
+
         profile1, profile2, profile3, profile4 = st.columns(4)
+
 
         profile1.metric(
             "Annual Income",
@@ -531,6 +663,7 @@ with customer_tab:
             ),
         )
 
+
         profile2.metric(
             "Net Cash Flow",
             format_currency(
@@ -539,6 +672,7 @@ with customer_tab:
                 ]
             ),
         )
+
 
         profile3.metric(
             "Accounts",
@@ -549,6 +683,7 @@ with customer_tab:
             ),
         )
 
+
         profile4.metric(
             "Active Loans",
             int(
@@ -558,15 +693,81 @@ with customer_tab:
             ),
         )
 
+
         st.divider()
+
+
+        st.markdown(
+            "#### Customer Intelligence"
+        )
+
+
+        intelligence1, intelligence2 = st.columns(2)
+
+
+        with intelligence1:
+
+            st.markdown(
+                "**Behavioral Segment**"
+            )
+
+            st.markdown(
+                f"### {customer['customer_segment']}"
+            )
+
+            st.write(
+                segment_description(
+                    customer[
+                        "customer_segment"
+                    ]
+                )
+            )
+
+
+        with intelligence2:
+
+            st.markdown(
+                "**Loan Readiness**"
+            )
+
+            level = customer[
+                "readiness_level"
+            ]
+
+            st.markdown(
+                f"### "
+                f"{readiness_icon(level)} "
+                f"{level}"
+            )
+
+            st.write(
+                f"Readiness score: "
+                f"**{int(customer['readiness_score'])}/3**"
+            )
+
+
+        st.divider()
+
 
         st.markdown(
             "#### Financial Behavior"
         )
 
+
         behavior1, behavior2, behavior3 = st.columns(3)
 
+
         behavior1.metric(
+            "Cash-Flow Margin",
+            format_percentage(
+                customer[
+                    "readiness_cash_flow_margin"
+                ]
+            ),
+        )
+
+
+        behavior2.metric(
             "Spending Ratio",
             format_percentage(
                 customer[
@@ -575,7 +776,8 @@ with customer_tab:
             ),
         )
 
-        behavior2.metric(
+
+        behavior3.metric(
             "Spending Variability",
             format_percentage(
                 customer[
@@ -584,20 +786,14 @@ with customer_tab:
             ),
         )
 
-        behavior3.metric(
-            "Transaction Count",
-            int(
-                customer[
-                    "transaction_count"
-                ]
-            ),
-        )
 
         st.markdown(
             "#### Debt Position"
         )
 
+
         debt1, debt2, debt3 = st.columns(3)
+
 
         debt1.metric(
             "Outstanding Balance",
@@ -608,6 +804,7 @@ with customer_tab:
             ),
         )
 
+
         debt2.metric(
             "Monthly EMI",
             format_currency(
@@ -616,6 +813,7 @@ with customer_tab:
                 ]
             ),
         )
+
 
         debt3.metric(
             "Debt-to-Income Ratio",
@@ -626,28 +824,18 @@ with customer_tab:
             ),
         )
 
+
         st.divider()
 
-        level = customer[
-            "readiness_level"
-        ]
 
         st.markdown(
-            "#### Loan Readiness"
+            "#### Readiness Explanation"
         )
 
-        st.markdown(
-            f"### {readiness_icon(level)} "
-            f"{level}"
-        )
 
-        st.write(
-            f"Readiness score: "
-            f"**{int(customer['readiness_score'])}/3**"
-        )
+        strengths = []
+        concerns = []
 
-        strength_list = []
-        concern_list = []
 
         if (
             customer[
@@ -655,13 +843,15 @@ with customer_tab:
             ]
             == 1
         ):
-            strength_list.append(
+            strengths.append(
                 "Healthy cash-flow margin"
             )
+
         else:
-            concern_list.append(
+            concerns.append(
                 "Cash-flow margin below 30%"
             )
+
 
         if (
             customer[
@@ -669,13 +859,15 @@ with customer_tab:
             ]
             == 1
         ):
-            strength_list.append(
+            strengths.append(
                 "Stable monthly spending"
             )
+
         else:
-            concern_list.append(
+            concerns.append(
                 "Higher monthly spending variability"
             )
+
 
         if (
             customer[
@@ -683,48 +875,232 @@ with customer_tab:
             ]
             == 1
         ):
-            strength_list.append(
+            strengths.append(
                 "Manageable existing debt burden"
             )
+
         else:
-            concern_list.append(
+            concerns.append(
                 "Debt-to-income ratio at or above 30%"
             )
 
-        explanation_left, explanation_right = st.columns(2)
 
-        with explanation_left:
+        explanation1, explanation2 = st.columns(2)
+
+
+        with explanation1:
 
             st.markdown(
                 "**Positive Signals**"
             )
 
-            if strength_list:
-                for strength in strength_list:
+            if strengths:
+
+                for strength in strengths:
                     st.success(
                         f"✓ {strength}"
                     )
+
             else:
+
                 st.write(
                     "No positive signals."
                 )
 
-        with explanation_right:
+
+        with explanation2:
 
             st.markdown(
                 "**Signals Requiring Attention**"
             )
 
-            if concern_list:
-                for concern in concern_list:
+            if concerns:
+
+                for concern in concerns:
                     st.warning(
                         concern
                     )
+
             else:
+
                 st.success(
-                    "No readiness concerns "
-                    "under the current project rules."
+                    "No readiness concerns under "
+                    "the current project rules."
                 )
+
+
+# =========================================================
+# SEGMENTATION
+# =========================================================
+
+with segmentation_tab:
+
+    st.subheader(
+        "Behavioral Customer Segmentation"
+    )
+
+
+    st.write(
+        "Customers are grouped using transparent financial "
+        "behavior rules derived from Customer 360 metrics."
+    )
+
+
+    st.caption(
+        "Segmentation describes customer behavior. "
+        "It does not represent credit approval or risk classification."
+    )
+
+
+    st.divider()
+
+
+    segment_distribution = (
+        filtered[
+            "customer_segment"
+        ]
+        .value_counts()
+    )
+
+
+    st.subheader(
+        "Segment Distribution"
+    )
+
+
+    st.bar_chart(
+        segment_distribution,
+        horizontal=True,
+    )
+
+
+    st.divider()
+
+
+    st.subheader(
+        "Segment Definitions"
+    )
+
+
+    segment1, segment2 = st.columns(2)
+
+
+    with segment1:
+
+        st.markdown(
+            "#### FINANCIALLY_STRONG"
+        )
+
+        st.write(
+            "Cash-flow margin ≥ 40%, spending ratio ≤ 60%, "
+            "and DTI < 30%."
+        )
+
+
+        st.markdown(
+            "#### HIGH_SPENDER"
+        )
+
+        st.write(
+            "Spending ratio ≥ 65%, provided the customer "
+            "has not already been classified as debt burdened."
+        )
+
+
+    with segment2:
+
+        st.markdown(
+            "#### DEBT_BURDENED"
+        )
+
+        st.write(
+            "Debt-to-income ratio ≥ 30%. "
+            "This rule takes priority over high spending."
+        )
+
+
+        st.markdown(
+            "#### STABLE"
+        )
+
+        st.write(
+            "Cash-flow margin ≥ 30% with DTI < 30%, "
+            "without satisfying the financially strong profile."
+        )
+
+
+    st.markdown(
+        "#### OTHER"
+    )
+
+    st.write(
+        "Fallback for customers who do not clearly match "
+        "one of the defined behavioral profiles."
+    )
+
+
+    st.divider()
+
+
+    st.subheader(
+        "Customer Segments"
+    )
+
+
+    segment_table = filtered[
+        [
+            "customer_id",
+            "readiness_cash_flow_margin",
+            "spending_ratio",
+            "debt_to_income_ratio",
+            "customer_segment",
+        ]
+    ].copy()
+
+
+    segment_table[
+        "readiness_cash_flow_margin"
+    ] = segment_table[
+        "readiness_cash_flow_margin"
+    ].map(
+        format_percentage
+    )
+
+
+    segment_table[
+        "spending_ratio"
+    ] = segment_table[
+        "spending_ratio"
+    ].map(
+        format_percentage
+    )
+
+
+    segment_table[
+        "debt_to_income_ratio"
+    ] = segment_table[
+        "debt_to_income_ratio"
+    ].map(
+        format_percentage
+    )
+
+
+    segment_table = segment_table.rename(
+        columns={
+            "customer_id": "Customer",
+            "readiness_cash_flow_margin": "Cash-Flow Margin",
+            "spending_ratio": "Spending Ratio",
+            "debt_to_income_ratio": "DTI",
+            "customer_segment": "Segment",
+        }
+    )
+
+
+    st.dataframe(
+        segment_table,
+        width="stretch",
+        hide_index=True,
+    )
 
 
 # =========================================================
@@ -737,13 +1113,16 @@ with readiness_tab:
         "Explainable Loan Readiness"
     )
 
+
     st.info(
         "This assessment uses transparent project rules rather "
         "than a black-box model. It is an educational indicator, "
         "not a lending or credit-approval system."
     )
 
+
     rule1, rule2, rule3 = st.columns(3)
+
 
     rule1.metric(
         "Cash-Flow Rule",
@@ -753,6 +1132,7 @@ with readiness_tab:
         ),
     )
 
+
     rule2.metric(
         "Stability Rule",
         "< 30%",
@@ -760,6 +1140,7 @@ with readiness_tab:
             "Coefficient of variation of monthly spending."
         ),
     )
+
 
     rule3.metric(
         "Debt Rule",
@@ -769,18 +1150,21 @@ with readiness_tab:
         ),
     )
 
+
     st.caption(
         "3/3 signals = HIGH • "
         "2/3 = MODERATE • "
         "0–1/3 = LOW"
     )
 
+
     st.divider()
+
 
     readiness_table = filtered[
         [
             "customer_id",
-            "cash_flow_margin",
+            "readiness_cash_flow_margin",
             "spending_variability",
             "debt_to_income_ratio",
             "readiness_score",
@@ -788,34 +1172,45 @@ with readiness_tab:
         ]
     ].copy()
 
+
     readiness_table[
-        "cash_flow_margin"
+        "readiness_cash_flow_margin"
     ] = readiness_table[
-        "cash_flow_margin"
-    ].map(format_percentage)
+        "readiness_cash_flow_margin"
+    ].map(
+        format_percentage
+    )
+
 
     readiness_table[
         "spending_variability"
     ] = readiness_table[
         "spending_variability"
-    ].map(format_percentage)
+    ].map(
+        format_percentage
+    )
+
 
     readiness_table[
         "debt_to_income_ratio"
     ] = readiness_table[
         "debt_to_income_ratio"
-    ].map(format_percentage)
+    ].map(
+        format_percentage
+    )
+
 
     readiness_table = readiness_table.rename(
         columns={
             "customer_id": "Customer",
-            "cash_flow_margin": "Cash-Flow Margin",
+            "readiness_cash_flow_margin": "Cash-Flow Margin",
             "spending_variability": "Spending Variability",
             "debt_to_income_ratio": "DTI",
             "readiness_score": "Score",
             "readiness_level": "Readiness",
         }
     )
+
 
     st.dataframe(
         readiness_table,
@@ -834,11 +1229,14 @@ with data_tab:
         "Customer 360 Analytical Dataset"
     )
 
+
     st.caption(
         "Grain: one row per customer. "
-        "This view combines customer profile, account activity, "
-        "transaction behavior and loan exposure."
+        "The analytical dataset combines customer profile, "
+        "account activity, transaction behavior, debt exposure, "
+        "segmentation and readiness."
     )
+
 
     st.dataframe(
         filtered,
@@ -846,29 +1244,34 @@ with data_tab:
         hide_index=True,
     )
 
+
     st.divider()
 
+
     st.markdown(
-        "#### Pipeline"
+        "#### Analytical Pipeline"
     )
+
 
     st.code(
         """
-Synthetic CSV data
+Synthetic CSV Data
         ↓
-Python ingestion & validation
+Python Generation
         ↓
-Raw / Processed / Rejected layers
+Validation & Data Quality
+        ↓
+Processed / Rejected Layers
         ↓
 PostgreSQL
         ↓
-SQL analytical transformations
+SQL Analytical Transformations
         ↓
 Customer 360
-        ↓
-Explainable Loan Readiness
-        ↓
-Streamlit Dashboard
+        ├── Behavioral Segmentation
+        └── Explainable Loan Readiness
+                    ↓
+            Streamlit Dashboard
         """,
         language=None,
     )
@@ -879,6 +1282,7 @@ Streamlit Dashboard
 # ---------------------------------------------------------
 
 st.divider()
+
 
 st.caption(
     "Financial Customer Intelligence • "
