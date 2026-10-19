@@ -42,6 +42,14 @@ def build_customer_metrics(customers, accounts, transactions):
         )
     )
 
+    transactions_with_customer["transaction_date"] = pd.to_datetime(
+        transactions_with_customer["transaction_date"]
+    )
+
+    transactions_with_customer["month"] = (
+        transactions_with_customer["transaction_date"].dt.to_period("M")
+    )
+
     transaction_summary = (
         transactions_with_customer.groupby(
             "customer_id",
@@ -54,8 +62,45 @@ def build_customer_metrics(customers, accounts, transactions):
         )
     )
 
+    monthly_spending = (
+        transactions_with_customer[
+            transactions_with_customer["transaction_type"] == "DEBIT"
+        ]
+        .groupby(
+            ["customer_id", "month"],
+            as_index=False,
+        )
+        .agg(
+            monthly_debit=("amount", "sum"),
+        )
+    )
+
+    spending_variability = (
+        monthly_spending.groupby(
+            "customer_id",
+            as_index=False,
+        )
+        .agg(
+            average_monthly_spending=("monthly_debit", "mean"),
+            monthly_spending_std=("monthly_debit", "std"),
+        )
+    )
+
+    spending_variability["spending_variability"] = (
+        spending_variability["monthly_spending_std"]
+        / spending_variability["average_monthly_spending"]
+    )   
+
     customer_metrics = customers.merge(
         transaction_summary,
+        on="customer_id",
+        how="left",
+    )
+
+    customer_metrics = customer_metrics.merge(
+        spending_variability[
+            ["customer_id", "spending_variability"]
+        ],
         on="customer_id",
         how="left",
     )
@@ -99,6 +144,7 @@ def main():
                 "total_debit",
                 "net_cash_flow",
                 "spending_ratio",
+                "spending_variability",
                 "transaction_count",
             ]
         ].to_string(index=False)

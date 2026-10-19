@@ -32,18 +32,21 @@ def test_customer_transaction_metrics_are_calculated():
             {
                 "transaction_id": "TXN001",
                 "account_id": "ACC00001",
+                "transaction_date": "2024-01-10",
                 "transaction_type": "CREDIT",
                 "amount": 50000,
             },
             {
                 "transaction_id": "TXN002",
                 "account_id": "ACC00001",
+                "transaction_date": "2024-01-15",
                 "transaction_type": "DEBIT",
                 "amount": 12000,
             },
             {
                 "transaction_id": "TXN003",
                 "account_id": "ACC00001",
+                "transaction_date": "2024-02-15",
                 "transaction_type": "DEBIT",
                 "amount": 8000,
             },
@@ -102,6 +105,7 @@ def test_customer_without_transactions_is_preserved():
             {
                 "transaction_id": "TXN001",
                 "account_id": "ACC00001",
+                "transaction_date": "2024-01-10",
                 "transaction_type": "CREDIT",
                 "amount": 50000,
             }
@@ -170,3 +174,64 @@ def test_unmatched_transaction_account_raises_error():
             accounts,
             transactions,
         )
+
+def test_spending_variability_is_calculated_from_monthly_spending():
+    customers = pd.DataFrame(
+        [
+            {
+                "customer_id": "CUST0001",
+                "age": 30,
+                "city": "Pune",
+                "occupation": "Software Engineer",
+                "annual_income": 600000,
+                "join_date": "2024-01-01",
+            }
+        ]
+    )
+
+    accounts = pd.DataFrame(
+        [
+            {
+                "account_id": "ACC00001",
+                "customer_id": "CUST0001",
+            }
+        ]
+    )
+
+    transactions = pd.DataFrame(
+        [
+            {
+                "transaction_id": "TXN001",
+                "account_id": "ACC00001",
+                "transaction_date": "2024-01-10",
+                "transaction_type": "DEBIT",
+                "amount": 1000,
+            },
+            {
+                "transaction_id": "TXN002",
+                "account_id": "ACC00001",
+                "transaction_date": "2024-02-10",
+                "transaction_type": "DEBIT",
+                "amount": 2000,
+            },
+            {
+                "transaction_id": "TXN003",
+                "account_id": "ACC00001",
+                "transaction_date": "2024-03-10",
+                "transaction_type": "DEBIT",
+                "amount": 3000,
+            },
+        ]
+    )
+
+    result = build_customer_metrics(
+        customers,
+        accounts,
+        transactions,
+    )
+
+    customer = result.iloc[0]
+
+    assert customer["spending_variability"] == pytest.approx(0.5)        
+
+        
