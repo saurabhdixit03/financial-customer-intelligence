@@ -17,7 +17,7 @@ SNAPSHOT_DIR = PROJECT_ROOT / "exports" / "dashboard"
 
 DATA_SOURCE = os.getenv(
     "DASHBOARD_DATA_SOURCE",
-    "postgres",
+    "snapshot",
 ).strip().lower()
 
 VALID_DATA_SOURCES = {
