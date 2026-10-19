@@ -7,6 +7,7 @@ from pathlib import Path
 CUSTOMERS_PATH = Path("data/raw/customers.csv")
 ACCOUNTS_PATH = Path("data/raw/accounts.csv")
 
+RANDOM_SEED = 42
 
 def load_customers():
     customers = []
@@ -85,6 +86,7 @@ def save_accounts(accounts):
 
 
 def main():
+    random.seed(RANDOM_SEED)
     customers = load_customers()
     accounts = generate_accounts(customers)
     save_accounts(accounts)

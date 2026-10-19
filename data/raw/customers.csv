@@ -1,21 +1,21 @@
 customer_id,age,city,occupation,annual_income,join_date
-CUST0001,44,Pune,Operations Executive,350000,2025-03-02
-CUST0002,50,Hyderabad,Accountant,1450000,2022-11-04
-CUST0003,43,Mumbai,Software Engineer,1700000,2022-12-04
-CUST0004,53,Chennai,Accountant,1100000,2025-12-18
-CUST0005,58,Chennai,Sales Executive,1600000,2024-06-23
-CUST0006,24,Pune,Software Engineer,2350000,2023-06-09
-CUST0007,39,Chennai,Business Owner,1050000,2020-06-07
-CUST0008,29,Bengaluru,Operations Executive,1650000,2024-10-05
-CUST0009,26,Mumbai,Teacher,1550000,2024-10-13
-CUST0010,54,Pune,Sales Executive,1700000,2024-07-04
-CUST0011,49,Mumbai,Sales Executive,1950000,2021-11-12
-CUST0012,51,Chennai,Software Engineer,2050000,2024-03-23
-CUST0013,38,Bengaluru,Business Owner,1000000,2021-09-16
-CUST0014,57,Bengaluru,Accountant,1050000,2025-03-18
-CUST0015,27,Chennai,Sales Executive,750000,2023-05-01
-CUST0016,52,Mumbai,Operations Executive,400000,2023-03-13
-CUST0017,46,Chennai,Software Engineer,1550000,2022-05-06
-CUST0018,43,Pune,Accountant,700000,2020-06-29
-CUST0019,48,Pune,Accountant,1950000,2020-01-20
-CUST0020,49,Hyderabad,Sales Executive,2200000,2023-03-26
+CUST0001,28,Pune,Operations Executive,1150000,2022-09-30
+CUST0002,35,Mumbai,Operations Executive,600000,2020-12-22
+CUST0003,58,Hyderabad,Software Engineer,350000,2021-01-18
+CUST0004,34,Mumbai,Business Owner,2200000,2020-04-18
+CUST0005,56,Mumbai,Operations Executive,2350000,2024-09-14
+CUST0006,35,Hyderabad,Business Owner,1150000,2020-01-27
+CUST0007,31,Hyderabad,Accountant,1150000,2021-09-28
+CUST0008,34,Bengaluru,Software Engineer,550000,2024-04-05
+CUST0009,27,Bengaluru,Accountant,2200000,2022-12-19
+CUST0010,23,Hyderabad,Business Owner,650000,2024-03-30
+CUST0011,26,Chennai,Accountant,2300000,2024-01-21
+CUST0012,57,Mumbai,Operations Executive,500000,2020-07-06
+CUST0013,35,Bengaluru,Software Engineer,1000000,2021-02-17
+CUST0014,45,Bengaluru,Sales Executive,2300000,2024-02-03
+CUST0015,31,Bengaluru,Accountant,950000,2022-12-29
+CUST0016,25,Chennai,Operations Executive,800000,2025-12-27
+CUST0017,36,Mumbai,Sales Executive,1500000,2023-01-10
+CUST0018,56,Mumbai,Operations Executive,1300000,2020-08-17
+CUST0019,35,Pune,Accountant,1550000,2023-01-01
+CUST0020,25,Mumbai,Business Owner,1300000,2022-05-20

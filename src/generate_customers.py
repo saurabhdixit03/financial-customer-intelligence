@@ -3,6 +3,7 @@ import random
 from datetime import date, timedelta
 from pathlib import Path
 
+RANDOM_SEED = 42
 
 NUMBER_OF_CUSTOMERS = 20
 
@@ -72,6 +73,7 @@ def save_customers(customers):
 
 
 def main():
+    random.seed(RANDOM_SEED)
     customers = generate_customers()
     save_customers(customers)
 

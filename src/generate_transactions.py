@@ -3,6 +3,7 @@ import random
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+RANDOM_SEED = 42
 
 CUSTOMERS_PATH = Path("data/raw/customers.csv")
 ACCOUNTS_PATH = Path("data/raw/accounts.csv")
@@ -183,6 +184,7 @@ def save_transactions(transactions):
 
 
 def main():
+    random.seed(RANDOM_SEED)
     customers = load_csv(CUSTOMERS_PATH)
     accounts = load_csv(ACCOUNTS_PATH)
 
