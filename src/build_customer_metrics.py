@@ -7,6 +7,9 @@ CUSTOMERS_PATH = Path("data/processed/customers.csv")
 ACCOUNTS_PATH = Path("data/processed/accounts.csv")
 TRANSACTIONS_PATH = Path("data/processed/transactions.csv")
 
+CUSTOMER_METRICS_PATH = Path(
+    "data/processed/customer_metrics.csv"
+)
 
 def load_data():
     customers = pd.read_csv(CUSTOMERS_PATH)
@@ -160,6 +163,11 @@ def main():
         customers,
         accounts,
         transactions,
+    )
+
+    customer_metrics.to_csv(
+        CUSTOMER_METRICS_PATH,
+        index=False,
     )
 
     print(
