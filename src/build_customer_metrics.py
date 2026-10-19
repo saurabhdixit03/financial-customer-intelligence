@@ -91,11 +91,27 @@ def build_customer_metrics(customers, accounts, transactions):
         / spending_variability["average_monthly_spending"]
     )   
 
+    account_summary = (
+        accounts.groupby(
+            "customer_id",
+            as_index=False,
+        )
+        .agg(
+            account_count=("account_id", "count"),
+        )
+    )
+
     customer_metrics = customers.merge(
         transaction_summary,
         on="customer_id",
         how="left",
     )
+
+    customer_metrics = customer_metrics.merge(
+    account_summary,
+    on="customer_id",
+    how="left",
+)
 
     customer_metrics = customer_metrics.merge(
         spending_variability[
@@ -106,9 +122,19 @@ def build_customer_metrics(customers, accounts, transactions):
     )
 
     customer_metrics[
-        ["total_credit", "total_debit", "transaction_count"]
+        [
+            "total_credit",
+            "total_debit",
+            "transaction_count",
+            "account_count",
+        ]
     ] = customer_metrics[
-        ["total_credit", "total_debit", "transaction_count"]
+        [
+            "total_credit",
+            "total_debit",
+            "transaction_count",
+            "account_count",
+        ]
     ].fillna(0)
 
     customer_metrics["net_cash_flow"] = (
@@ -140,6 +166,7 @@ def main():
         customer_metrics[
             [
                 "customer_id",
+                "account_count",
                 "total_credit",
                 "total_debit",
                 "net_cash_flow",

@@ -61,6 +61,7 @@ def test_customer_transaction_metrics_are_calculated():
 
     customer = result.iloc[0]
 
+    assert customer["account_count"] == 1
     assert customer["total_credit"] == 50000
     assert customer["total_debit"] == 20000
     assert customer["net_cash_flow"] == 30000
@@ -124,6 +125,7 @@ def test_customer_without_transactions_is_preserved():
         result["customer_id"] == "CUST0002"
     ].iloc[0]
 
+    assert customer["account_count"] == 0
     assert customer["total_credit"] == 0
     assert customer["total_debit"] == 0
     assert customer["net_cash_flow"] == 0
