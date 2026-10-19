@@ -68,6 +68,10 @@ PIPELINE_STAGES = [
         "Reconcile Pandas, Spark and SQL metrics",
         "src.reconcile_customer_metrics_spark",
     ),
+    PipelineStage(
+        "Export dashboard snapshot",
+        "src.export_dashboard_data",
+    ),
 ]
 
 

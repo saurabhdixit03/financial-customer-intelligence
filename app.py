@@ -1,9 +1,9 @@
 import os
+from pathlib import Path
 
 import pandas as pd
 import psycopg
 import streamlit as st
-
 
 DB_CONFIG = {
     "host": "127.0.0.1",
@@ -12,10 +12,29 @@ DB_CONFIG = {
     "user": "postgres",
 }
 
+PROJECT_ROOT = Path(__file__).resolve().parent
+SNAPSHOT_DIR = PROJECT_ROOT / "exports" / "dashboard"
+
+DATA_SOURCE = os.getenv(
+    "DASHBOARD_DATA_SOURCE",
+    "postgres",
+).strip().lower()
+
+VALID_DATA_SOURCES = {
+    "postgres",
+    "snapshot",
+}
+
+if DATA_SOURCE not in VALID_DATA_SOURCES:
+    raise RuntimeError(
+        "DASHBOARD_DATA_SOURCE must be either "
+        "'postgres' or 'snapshot'."
+    )
+
 
 st.set_page_config(
     page_title="Financial Customer Intelligence",
-    page_icon="ðŸ“Š",
+    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -38,6 +57,11 @@ def get_password():
 
 @st.cache_data(ttl=60)
 def load_customer_360():
+    if DATA_SOURCE == "snapshot":
+        return pd.read_csv(
+            SNAPSHOT_DIR / "customer_360.csv"
+        )
+
     with psycopg.connect(
         **DB_CONFIG,
         password=get_password(),
@@ -54,6 +78,11 @@ def load_customer_360():
 
 @st.cache_data(ttl=60)
 def load_loan_readiness():
+    if DATA_SOURCE == "snapshot":
+        return pd.read_csv(
+            SNAPSHOT_DIR / "loan_readiness.csv"
+        )
+
     with psycopg.connect(
         **DB_CONFIG,
         password=get_password(),
@@ -70,6 +99,11 @@ def load_loan_readiness():
 
 @st.cache_data(ttl=60)
 def load_customer_segmentation():
+    if DATA_SOURCE == "snapshot":
+        return pd.read_csv(
+            SNAPSHOT_DIR / "customer_segmentation.csv"
+        )
+
     with psycopg.connect(
         **DB_CONFIG,
         password=get_password(),
@@ -83,7 +117,6 @@ def load_customer_segmentation():
             connection,
         )
 
-
 # ---------------------------------------------------------
 # Formatting
 # ---------------------------------------------------------
@@ -92,7 +125,7 @@ def format_currency(value):
     if pd.isna(value):
         return "N/A"
 
-    return f"â‚¹{float(value):,.0f}"
+    return f"₹{float(value):,.0f}"
 
 
 def format_percentage(value):
@@ -104,10 +137,10 @@ def format_percentage(value):
 
 def readiness_icon(level):
     return {
-        "HIGH": "ðŸŸ¢",
-        "MODERATE": "ðŸŸ¡",
-        "LOW": "ðŸ”´",
-    }.get(level, "âšª")
+        "HIGH": "🟢",
+        "MODERATE": "🟡",
+        "LOW": "🔴",
+    }.get(level, "⚪")
 
 
 def segment_description(segment):
@@ -365,8 +398,8 @@ st.title(
 
 st.markdown(
     """
-    **Customer 360 â€¢ Behavioral Segmentation â€¢
-    Financial Health â€¢ Explainable Loan Readiness**
+    **Customer 360 • Behavioral Segmentation •
+    Financial Health • Explainable Loan Readiness**
     """
 )
 
@@ -388,11 +421,11 @@ st.caption(
     data_tab,
 ) = st.tabs(
     [
-        "ðŸ“Š Overview",
-        "ðŸ‘¤ Customer Explorer",
-        "ðŸ§© Segmentation",
-        "ðŸ’³ Loan Readiness",
-        "ðŸ—ƒï¸ Data Explorer",
+        "📊 Overview",
+        "👤 Customer Explorer",
+        "🧩 Segmentation",
+        "💳 Loan Readiness",
+        "🗃️ Data Explorer",
     ]
 )
 
@@ -635,8 +668,8 @@ with customer_tab:
 
 
         st.caption(
-            f"{customer['occupation']} â€¢ "
-            f"{customer['city']} â€¢ "
+            f"{customer['occupation']} • "
+            f"{customer['city']} • "
             f"Customer since "
             f"{customer['join_date']}"
         )
@@ -889,7 +922,7 @@ with customer_tab:
 
                 for strength in strengths:
                     st.success(
-                        f"âœ“ {strength}"
+                        f"✓ {strength}"
                     )
 
             else:
@@ -983,7 +1016,7 @@ with segmentation_tab:
         )
 
         st.write(
-            "Cash-flow margin â‰¥ 40%, spending ratio â‰¤ 60%, "
+            "Cash-flow margin ≥ 40%, spending ratio ≤ 60%, "
             "and DTI < 30%."
         )
 
@@ -993,7 +1026,7 @@ with segmentation_tab:
         )
 
         st.write(
-            "Spending ratio â‰¥ 65%, provided the customer "
+            "Spending ratio ≥ 65%, provided the customer "
             "has not already been classified as debt burdened."
         )
 
@@ -1005,7 +1038,7 @@ with segmentation_tab:
         )
 
         st.write(
-            "Debt-to-income ratio â‰¥ 30%. "
+            "Debt-to-income ratio ≥ 30%. "
             "This rule takes priority over high spending."
         )
 
@@ -1015,7 +1048,7 @@ with segmentation_tab:
         )
 
         st.write(
-            "Cash-flow margin â‰¥ 30% with DTI < 30%, "
+            "Cash-flow margin ≥ 30% with DTI < 30%, "
             "without satisfying the financially strong profile."
         )
 
@@ -1118,7 +1151,7 @@ with readiness_tab:
 
     rule1.metric(
         "Cash-Flow Rule",
-        "â‰¥ 30%",
+        "≥ 30%",
         help=(
             "Net cash flow divided by total credit."
         ),
@@ -1144,9 +1177,9 @@ with readiness_tab:
 
 
     st.caption(
-        "3/3 signals = HIGH â€¢ "
-        "2/3 = MODERATE â€¢ "
-        "0â€“1/3 = LOW"
+        "3/3 signals = HIGH • "
+        "2/3 = MODERATE • "
+        "0–1/3 = LOW"
     )
 
 
@@ -1248,21 +1281,21 @@ with data_tab:
     st.code(
         """
 Synthetic CSV Data
-        â†“
+        ↓
 Python Generation
-        â†“
+        ↓
 Validation & Data Quality
-        â†“
+        ↓
 Processed / Rejected Layers
-        â†“
+        ↓
 PostgreSQL
-        â†“
+        ↓
 SQL Analytical Transformations
-        â†“
+        ↓
 Customer 360
-        â”œâ”€â”€ Behavioral Segmentation
-        â””â”€â”€ Explainable Loan Readiness
-                    â†“
+        ├── Behavioral Segmentation
+        └── Explainable Loan Readiness
+                    ↓
             Streamlit Dashboard
         """,
         language=None,
@@ -1277,6 +1310,6 @@ st.divider()
 
 
 st.caption(
-    "Financial Customer Intelligence â€¢ "
-    "Python â€¢ PostgreSQL â€¢ Pandas â€¢ PySpark â€¢ Streamlit"
+    "Financial Customer Intelligence • "
+    "Python • PostgreSQL • Pandas • PySpark • Streamlit"
 )
