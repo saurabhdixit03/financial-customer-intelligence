@@ -15,7 +15,7 @@ DB_CONFIG = {
 
 st.set_page_config(
     page_title="Financial Customer Intelligence",
-    page_icon="📊",
+    page_icon="ðŸ“Š",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -92,7 +92,7 @@ def format_currency(value):
     if pd.isna(value):
         return "N/A"
 
-    return f"₹{float(value):,.0f}"
+    return f"â‚¹{float(value):,.0f}"
 
 
 def format_percentage(value):
@@ -104,10 +104,10 @@ def format_percentage(value):
 
 def readiness_icon(level):
     return {
-        "HIGH": "🟢",
-        "MODERATE": "🟡",
-        "LOW": "🔴",
-    }.get(level, "⚪")
+        "HIGH": "ðŸŸ¢",
+        "MODERATE": "ðŸŸ¡",
+        "LOW": "ðŸ”´",
+    }.get(level, "âšª")
 
 
 def segment_description(segment):
@@ -316,14 +316,6 @@ selected_readiness = st.sidebar.multiselect(
 )
 
 
-st.sidebar.divider()
-
-st.sidebar.caption(
-    "Synthetic educational dataset. "
-    "Not intended for real lending decisions."
-)
-
-
 # ---------------------------------------------------------
 # Apply filters
 # ---------------------------------------------------------
@@ -373,15 +365,14 @@ st.title(
 
 st.markdown(
     """
-    **Customer 360 • Behavioral Segmentation •
-    Financial Health • Explainable Loan Readiness**
+    **Customer 360 â€¢ Behavioral Segmentation â€¢
+    Financial Health â€¢ Explainable Loan Readiness**
     """
 )
 
 st.caption(
-    "A data engineering and analytics project that transforms "
-    "raw synthetic financial data into validated customer-level "
-    "decision-support insights."
+    "An end-to-end data pipeline transforming raw financial records "
+    "into validated customer-level intelligence."
 )
 
 
@@ -397,11 +388,11 @@ st.caption(
     data_tab,
 ) = st.tabs(
     [
-        "📊 Overview",
-        "👤 Customer Explorer",
-        "🧩 Segmentation",
-        "💳 Loan Readiness",
-        "🗃️ Data Explorer",
+        "ðŸ“Š Overview",
+        "ðŸ‘¤ Customer Explorer",
+        "ðŸ§© Segmentation",
+        "ðŸ’³ Loan Readiness",
+        "ðŸ—ƒï¸ Data Explorer",
     ]
 )
 
@@ -644,8 +635,8 @@ with customer_tab:
 
 
         st.caption(
-            f"{customer['occupation']} • "
-            f"{customer['city']} • "
+            f"{customer['occupation']} â€¢ "
+            f"{customer['city']} â€¢ "
             f"Customer since "
             f"{customer['join_date']}"
         )
@@ -898,7 +889,7 @@ with customer_tab:
 
                 for strength in strengths:
                     st.success(
-                        f"✓ {strength}"
+                        f"âœ“ {strength}"
                     )
 
             else:
@@ -992,7 +983,7 @@ with segmentation_tab:
         )
 
         st.write(
-            "Cash-flow margin ≥ 40%, spending ratio ≤ 60%, "
+            "Cash-flow margin â‰¥ 40%, spending ratio â‰¤ 60%, "
             "and DTI < 30%."
         )
 
@@ -1002,7 +993,7 @@ with segmentation_tab:
         )
 
         st.write(
-            "Spending ratio ≥ 65%, provided the customer "
+            "Spending ratio â‰¥ 65%, provided the customer "
             "has not already been classified as debt burdened."
         )
 
@@ -1014,7 +1005,7 @@ with segmentation_tab:
         )
 
         st.write(
-            "Debt-to-income ratio ≥ 30%. "
+            "Debt-to-income ratio â‰¥ 30%. "
             "This rule takes priority over high spending."
         )
 
@@ -1024,7 +1015,7 @@ with segmentation_tab:
         )
 
         st.write(
-            "Cash-flow margin ≥ 30% with DTI < 30%, "
+            "Cash-flow margin â‰¥ 30% with DTI < 30%, "
             "without satisfying the financially strong profile."
         )
 
@@ -1115,9 +1106,10 @@ with readiness_tab:
 
 
     st.info(
-        "This assessment uses transparent project rules rather "
-        "than a black-box model. It is an educational indicator, "
-        "not a lending or credit-approval system."
+        "Readiness is calculated using transparent rules based on "
+        "cash-flow margin, spending stability, and debt-to-income ratio. "
+        "The result is an analytical score rather than a predictive "
+        "credit-approval model."
     )
 
 
@@ -1126,7 +1118,7 @@ with readiness_tab:
 
     rule1.metric(
         "Cash-Flow Rule",
-        "≥ 30%",
+        "â‰¥ 30%",
         help=(
             "Net cash flow divided by total credit."
         ),
@@ -1152,9 +1144,9 @@ with readiness_tab:
 
 
     st.caption(
-        "3/3 signals = HIGH • "
-        "2/3 = MODERATE • "
-        "0–1/3 = LOW"
+        "3/3 signals = HIGH â€¢ "
+        "2/3 = MODERATE â€¢ "
+        "0â€“1/3 = LOW"
     )
 
 
@@ -1256,21 +1248,21 @@ with data_tab:
     st.code(
         """
 Synthetic CSV Data
-        ↓
+        â†“
 Python Generation
-        ↓
+        â†“
 Validation & Data Quality
-        ↓
+        â†“
 Processed / Rejected Layers
-        ↓
+        â†“
 PostgreSQL
-        ↓
+        â†“
 SQL Analytical Transformations
-        ↓
+        â†“
 Customer 360
-        ├── Behavioral Segmentation
-        └── Explainable Loan Readiness
-                    ↓
+        â”œâ”€â”€ Behavioral Segmentation
+        â””â”€â”€ Explainable Loan Readiness
+                    â†“
             Streamlit Dashboard
         """,
         language=None,
@@ -1285,7 +1277,6 @@ st.divider()
 
 
 st.caption(
-    "Financial Customer Intelligence • "
-    "Synthetic educational data • "
-    "Not intended for real lending decisions"
+    "Financial Customer Intelligence â€¢ "
+    "Python â€¢ PostgreSQL â€¢ Pandas â€¢ PySpark â€¢ Streamlit"
 )
