@@ -61,6 +61,7 @@ def test_customer_transaction_metrics_are_calculated():
     assert customer["total_credit"] == 50000
     assert customer["total_debit"] == 20000
     assert customer["net_cash_flow"] == 30000
+    assert customer["spending_ratio"] == 0.4
     assert customer["transaction_count"] == 3
 
 
@@ -122,6 +123,7 @@ def test_customer_without_transactions_is_preserved():
     assert customer["total_credit"] == 0
     assert customer["total_debit"] == 0
     assert customer["net_cash_flow"] == 0
+    assert customer["spending_ratio"] == 0
     assert customer["transaction_count"] == 0
 
 

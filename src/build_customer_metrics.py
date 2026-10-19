@@ -71,6 +71,14 @@ def build_customer_metrics(customers, accounts, transactions):
         - customer_metrics["total_debit"]
     )
 
+    customer_metrics["spending_ratio"] = (
+        customer_metrics["total_debit"]
+        / customer_metrics["total_credit"]
+    ).where(
+        customer_metrics["total_credit"] > 0,
+    0,
+    )
+
     return customer_metrics
 
 
@@ -90,6 +98,7 @@ def main():
                 "total_credit",
                 "total_debit",
                 "net_cash_flow",
+                "spending_ratio",
                 "transaction_count",
             ]
         ].to_string(index=False)
