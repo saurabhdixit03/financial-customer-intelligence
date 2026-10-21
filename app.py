@@ -1310,6 +1310,5 @@ st.divider()
 
 
 st.caption(
-    "Financial Customer Intelligence • "
-    "Python • PostgreSQL • Pandas • PySpark • Streamlit"
+    "Financial Customer Intelligence"
 )
